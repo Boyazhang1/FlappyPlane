@@ -63,7 +63,7 @@ const stringvector MISSILE {
 {"   \\/  "},
 };
 
-// Globals
+// Globals testing
 
 struct termios initialTerm; // declaring variable of type "struct termios" named initialTerm
 
