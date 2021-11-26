@@ -1,4 +1,4 @@
 # SYDE121FinalProject
 
-David, Rachel, Boya making a car game for SYDE 121. 
+David, Rachel, Boya making an action game for SYDE 121. 
 
