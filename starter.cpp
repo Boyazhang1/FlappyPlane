@@ -8,6 +8,12 @@
 #include<vector>
 #include<string>
 #include<cmath>
+// needed to use sleep function
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <unistd.h>
+#endif
 
 using namespace std;
 
@@ -46,8 +52,8 @@ const unsigned int COLOUR_BRIGHTGREEN  { 92 };
 const stringvector PLANE {
 {"            __/\\__"},
 {"           `==/\\==`"},
-{" ____________/__\\____________"},
-{"/____________________________\\ "},
+{" ____________/__\\___________"},
+{"/___________________________\\"},
 {"  __||__||__/.--.\\__||__||__ "},
 {" /__|___|___( >< )___|___|__\\ "},
 {"           _/`--`\\_"},
@@ -55,13 +61,13 @@ const stringvector PLANE {
 };
 
 const stringvector MISSILE { 
-{" |\\||/|   "},     
-{" \\ == /  "},
-{"  |  |  "},
-{"  |  |  "},
-{"  \\  /  "},
-{"   \\/  "},
+{" ,-*"},
+{"(_)"},
 };
+
+// vector <position> missilePositions = {{1, 1}, {1, 1}}; 
+
+vector <unsigned int> missilePositionsY = {1, 1}; 
 
 // Globals testing
 
@@ -159,6 +165,32 @@ auto DrawSprite( position targetPosition,
         MoveTo( ( targetPosition.row + ( currentSpriteRow + 1 ) ) , targetPosition.col );
     };
 }
+auto drawBorder (position screenDimensions) -> void {
+    const unsigned int screenHeight = screenDimensions.row;
+    const unsigned int screenWidth = screenDimensions.col; 
+
+    for (int i = 0; i < (int) screenHeight; i++) {
+        for (int j = 0; j < (int) (screenWidth - 50) / 2; j++ ) {
+            MoveTo(i, j); 
+            cout << '+'; 
+            MoveTo(i, (screenWidth - 50) / 2 + 50 + j); 
+            cout << '+'; 
+        }
+    }
+}
+
+// auto collision (unsigned int planeX, unsigned int terminalHeight, position missile) -> bool 
+// {
+
+//     // vertical position of missile is less than 5 from bottom
+//     if ((int) terminalHeight - missile.yPosition < 8) {
+//         // plane is to the left of missile
+//         if ( (int) planeX < missile.xPosition && missile.xPosition - planeX <= 30) {
+//             return true;  
+//         }
+//     }
+//     return false; 
+// }
 
 auto main() -> int
 {
@@ -174,18 +206,27 @@ auto main() -> int
         return EXIT_FAILURE;
     }
 
-    // 1. Initialize State
-    position currentPosition {1,1};
     
+    const unsigned int borderWidth = (TERMINAL_SIZE.col - 50) / 2; 
+    // const unsigned int borderHeight = TERMINAL_SIZE.row;
+
+    // 1. Initialize State
+    position currentPosition { TERMINAL_SIZE.row - 8, borderWidth};
     // GameLoop
     char currentChar {'z'}; // I would rather use a different approach, but this is quick
+
+    int pos1 = 1, pos2 = 1; 
+    while (pos1 - pos2 < 30) {
+        pos1 = rand()%(50) + borderWidth; 
+        pos2 = rand()%(50) + borderWidth; 
+    } 
+
+    // 
     while( currentChar != QUIT_CHAR )
     {
         // 2. Update State
-        if ( currentChar == UP_CHAR )    { currentPosition.row = max(  1U,(currentPosition.row - 1) ); }
-        if ( currentChar == DOWN_CHAR )  { currentPosition.row = min( 20U,(currentPosition.row + 1) ); }
-        if ( currentChar == LEFT_CHAR )  { currentPosition.col = max(  1U,(currentPosition.col - 1) ); }
-        if ( currentChar == RIGHT_CHAR ) { currentPosition.col = min( 40U,(currentPosition.col + 1) ); }
+        if ( currentChar == LEFT_CHAR )  { currentPosition.col = max(  borderWidth,(currentPosition.col - 1) ); }
+        if ( currentChar == RIGHT_CHAR ) { currentPosition.col = min( borderWidth + 50 - 30 ,(currentPosition.col + 1) ); }
 
         // 3. Update Screen
 
@@ -193,11 +234,32 @@ auto main() -> int
         ClearScreen();
         HideCursor(); // sometimes the Visual Studio Code terminal seems to forget
 
+        int pos1 = 1, pos2 = 1; 
+        while (pos1 - pos2 < 30) {
+        pos1 = rand()%(50) + borderWidth; 
+        pos2 = rand()%(50) + borderWidth; 
+        } 
+        
+
+
         // 3.B Draw based on state
-        MoveTo( currentPosition.row, currentPosition.col );
-        cout << MakeColour( "><((('>", COLOUR_WHITE, COLOUR_BLUE );
-        DrawSprite( {currentPosition.row, ( currentPosition.col + 7 ) }, PLANE );
-        MoveTo( 21, 1 );
+        // MoveTo( currentPosition.row, currentPosition.col );
+        // cout << MakeColour( "><((('>", COLOUR_WHITE, COLOUR_BLUE );
+        drawBorder(TERMINAL_SIZE); 
+        DrawSprite( {currentPosition.row, currentPosition.col }, PLANE );
+
+
+        DrawSprite({missilePositionsY[0], (unsigned int) pos1}, MISSILE); 
+        DrawSprite({missilePositionsY[1], (unsigned int) pos2}, MISSILE); 
+        // sleep();
+
+        // write collision function here 
+        // add two boolean flags to keep track of whether missiles exist on the screen
+        // increment vertical position of missile
+        // if missiles reach end, reset 
+
+
+        // MoveTo( 1, 60 );
         cout << "[" << currentPosition.row << "," << currentPosition.col << "]" << endl;
 
         // 4. Prepare for the next pass
