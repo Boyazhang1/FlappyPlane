@@ -8,11 +8,6 @@
 #include<vector>
 #include<string>
 #include<cmath>
-#include <chrono>
-#include <thread>
-#include <time.h>
-#include <sys/ioctl.h>
-#include <termios.h>
 // needed to use sleep function
 #ifdef _WIN32
 #include <Windows.h>
@@ -74,20 +69,18 @@ const stringvector EMPTYPLANE {
 {"                               "},
 {"                    "},
 {"                     "},
-};
-
+};   
+}
 
 const stringvector MISSILE { 
 {" ,-*"},
 {"(_)"},
 };
 
-const stringvector EMPTYMISSILE { 
+const stringvector EMPTYMISSLE {
 {"    "},
-{"   "},
-};
-
-
+{"  "},    
+}
 // vector <position> missilePositions = {{1, 1}, {1, 1}}; 
 
 vector <unsigned int> missilePositionsY = {1, 1}; 
@@ -194,106 +187,35 @@ auto drawBorder (position screenDimensions) -> void {
     const unsigned int screenWidth = screenDimensions.col; 
 
     for (int i = 0; i < (int) screenHeight; i++) {
-        for (int j = 0; j < (int) (screenWidth - 70) / 2; j++ ) {
+        for (int j = 0; j < (int) (screenWidth - 50) / 2; j++ ) {
             MoveTo(i, j); 
             cout << '+'; 
-            MoveTo(i, (screenWidth - 70) / 2 + 70 + j); 
+            MoveTo(i, (screenWidth - 50) / 2 + 50 + j); 
             cout << '+'; 
         }
     }
 }
 
-auto erasePlane(position planePosition) -> void {
+// auto collision (unsigned int planeX, unsigned int terminalHeight, position missile) -> bool 
+// {
 
-    DrawSprite(planePosition, EMPTYPLANE); 
-}
-
-auto eraseMissile(position bombPosition) -> void {
-
-    DrawSprite(bombPosition, EMPTYMISSILE); 
-}
-
-
-
-
-// Consider this from a Library
-bool kbhit()
-{
-    termios term;
-    tcgetattr(0, &term);
-
-    termios term2 = term;
-    term2.c_lflag &= ~ICANON;
-    tcsetattr(0, TCSANOW, &term2);
-
-    int byteswaiting;
-    ioctl(0, FIONREAD, &byteswaiting);
-
-    tcsetattr(0, TCSANOW, &term);
-
-    return byteswaiting > 0;
-}
-
-
-int missileSpawn( int position, int existing, unsigned int borderwidth){
-    if (missilePositionsY[0] == 1 && missilePositionsY[1] == 1){
-        position = 1; 
-        while (position - 1 < 30) {
-        position = rand()%(50) + borderwidth; 
-        }
-    } 
-    else {
-        while (position - existing < 30) {
-        position = rand()%(50) + borderwidth;
-        } 
-    }
-    return position; 
-}
-
-// auto resetMissile(int )
-
-int missileDead( int positionchange, int positionexisting, int type, unsigned int borderwidth){
-    positionchange = 1; 
-    while (positionchange - positionexisting < 30) {
-        positionchange = rand()%(50) + borderwidth; 
-    } 
-    missilePositionsY[type] = 1;
-    return positionchange;
-}
-
-
-
-struct missile { position coordinates; bool active; int count; }; 
-
-auto collision (unsigned int planeX, unsigned int terminalHeight, missile m) -> bool 
-{
-
-    // vertical position of missile is less than 5 from bottom
-    if (terminalHeight - m.coordinates.row < 8) {
-        // plane is to the left of missile
-        if (planeX < m.coordinates.col && m.coordinates.col - planeX <= 30) {
-            return true;  
-        }
-    }
-    return false; 
-}
-
-
-
-
+//     // vertical position of missile is less than 5 from bottom
+//     if ((int) terminalHeight - missile.yPosition < 8) {
+//         // plane is to the left of missile
+//         if ( (int) planeX < missile.xPosition && missile.xPosition - planeX <= 30) {
+//             return true;  
+//         }
+//     }
+//     return false; 
+// }
 
 auto main() -> int
 {
-    // bool missile1Dead = false;
-    // bool missile2Dead = false;
-    using namespace std::this_thread; // sleep_for, sleep_until
-    using namespace std::chrono; // nanoseconds, system_clock, seconds
-
-
     // 0. Set Up the system and get the size of the screen
+
     SetupScreenAndInput();
     const position TERMINAL_SIZE { GetTerminalSize() };
-    if ( ( TERMINAL_SIZE.row < 30 ) or ( TERMINAL_SIZE.col < 70 ) )
+    if ( ( TERMINAL_SIZE.row < 30 ) or ( TERMINAL_SIZE.col < 50 ) )
     {
         ShowCursor();
         TeardownScreenAndInput();
@@ -301,9 +223,8 @@ auto main() -> int
         return EXIT_FAILURE;
     }
 
-
     
-    const unsigned int borderWidth = (TERMINAL_SIZE.col - 70) / 2; 
+    const unsigned int borderWidth = (TERMINAL_SIZE.col - 50) / 2; 
     // const unsigned int borderHeight = TERMINAL_SIZE.row;
 
     // 1. Initialize State
@@ -311,150 +232,64 @@ auto main() -> int
     // GameLoop
     char currentChar {'z'}; // I would rather use a different approach, but this is quick
 
-    // int pos1 = 1, pos2 = 1; 
+    int pos1 = 1, pos2 = 1; 
+    while (pos1 - pos2 < 30) {
+        pos1 = rand()%(50) + borderWidth; 
+        pos2 = rand()%(50) + borderWidth; 
+    } 
 
-    // while (pos1 - pos2 < 30) {
-    //     pos1 = rand()%(50) + borderWidth; 
-    //     pos2 = rand()%(50) + borderWidth; 
-    // } 
-
-    
-
-    
-    while (true){
-        cout << endl <<  "Avoid bombs by pressing a to go Left and d to go Right" << endl;
-        cout << endl <<  "Press any Key to Start" << endl;
-        getchar();
-        break;
-    }
-    ClearScreen(); 
-
-    missile missile1 = {{1, rand()%(70) + borderWidth}, true, 0}; 
-    bool playerAlive = true; 
-    
-    drawBorder(TERMINAL_SIZE);
-
-    while(playerAlive)
+    // 
+    while (true)
     {
-
-        // while True: 
-        // getChar(); 
-        // check if char is left or right
-        // display bombs
-        // draw plane
-        // sleep 25ms
-        // move position of bombs 1 px downward
-        // check if bomb hits plane or getChar == q
-        // break if the above
         // 2. Update State
-        DrawSprite( {currentPosition.row, currentPosition.col }, PLANE );
-        DrawSprite({missile1.coordinates.row, missile1.coordinates.col}, MISSILE);
-        missile1.count += 1; 
-        if (kbhit()) { 
-            currentChar = getchar();
-            if ( currentChar == LEFT_CHAR )  {
-                erasePlane({currentPosition.row, currentPosition.col });
-                currentPosition.col = max(  borderWidth,(currentPosition.col - 1) );
-                DrawSprite( {currentPosition.row, currentPosition.col }, PLANE );
-                }
-            if ( currentChar == RIGHT_CHAR ) {
-                erasePlane({currentPosition.row, currentPosition.col });
-                currentPosition.col = min( borderWidth + 70 - 30 ,(currentPosition.col + 1) );
-                DrawSprite( {currentPosition.row, currentPosition.col }, PLANE );
-                }
-            currentChar = 'z';
-        }
-        
-        
+        if ( currentChar == LEFT_CHAR )  { currentPosition.col = max(  borderWidth,(currentPosition.col - 1) ); }
+        if ( currentChar == RIGHT_CHAR ) { currentPosition.col = min( borderWidth + 50 - 30 ,(currentPosition.col + 1) ); }
 
         // 3. Update Screen
+
         // 3.A Prepare Screen
-       
-        // int pos1 = 1, pos2 = 1; 
-        // while (pos1 - pos2 < 30) {
-        // pos1 = rand()%(50) + borderWidth; 
-        // pos2 = rand()%(50) + borderWidth; 
-        // }  
+    
+        HideCursor(); // sometimes the Visual Studio Code terminal seems to forget
+
+        int pos1 = 1, pos2 = 1; 
+        while (pos1 - pos2 < 30) {
+        pos1 = rand()%(50) + borderWidth; 
+        pos2 = rand()%(50) + borderWidth; 
+        } 
         
-        HideCursor();
-        //ClearScreen();
+
+
         // 3.B Draw based on state
         // MoveTo( currentPosition.row, currentPosition.col );
         // cout << MakeColour( "><((('>", COLOUR_WHITE, COLOUR_BLUE );
-
-        // drawBorder(TERMINAL_SIZE);
-        // DrawSprite( {currentPosition.row, currentPosition.col }, PLANE );
-        // if (!missileDead) {
-            
-        // } 
-        sleep_for(20ms);
-        if (missile1.count % 10 == 0) {
-            eraseMissile({missile1.coordinates.row, missile1.coordinates.col});
-            missile1.coordinates.row += 2;
-        } 
-
-        if (collision(currentPosition.col, TERMINAL_SIZE.row, missile1)) {
-            ClearScreen();
-            MoveTo(TERMINAL_SIZE.row / 2, TERMINAL_SIZE.col / 2);
-            cout << "-------------------------------" << endl;
-            MoveTo(TERMINAL_SIZE.row / 2 + 1, TERMINAL_SIZE.col / 2);
-            cout <<  "You died:(" << endl;
-            MoveTo(TERMINAL_SIZE.row / 2 + 1, TERMINAL_SIZE.col / 2);
-            cout << "Press p to play again" << endl; 
-            sleep_for(1000ms); 
-            char enteredChar = getchar(); 
-            if (enteredChar == 'p') {
-                ClearScreen(); 
-                drawBorder(TERMINAL_SIZE);
-                // make a reset function
-                missile1.coordinates.row = 1; 
-                missile1.coordinates.col = rand()%(70) + borderWidth;
-                missile1.count = 0;  
-            } else {
-                playerAlive = false; 
-                ClearScreen(); 
-                MoveTo(TERMINAL_SIZE.row / 2, TERMINAL_SIZE.col / 2);
-                cout << "The end" << endl;
-                sleep_for(3000ms);
-            }
-        }
-        // eraseMissile({missile1.coordinates.row, missile1.coordinates.col});
-        
+        drawBorder(TERMINAL_SIZE); 
+        DrawSprite( {currentPosition.row, currentPosition.col }, PLANE );
 
 
-        // DrawSprite({missilePositionsY[1], (unsigned int) pos2}, MISSILE); 
- 
-        
+        DrawSprite({missilePositionsY[0], (unsigned int) pos1}, MISSILE); 
+        DrawSprite({missilePositionsY[1], (unsigned int) pos2}, MISSILE); 
+        sleep(20);
+
         // write collision function here 
         // add two boolean flags to keep track of whether missiles exist on the screen
         // increment vertical position of missile
         // if missiles reach end, reset 
 
 
-        // MoveTo( 1, 120 );
-        // cout << "Your Score:" + to_string(counter) << endl;
-        // counter +=1;
-        if (missile1.coordinates.row + 2 > TERMINAL_SIZE.row) {
-            missile1.coordinates.row = 1; 
-            missile1.coordinates.col = rand()%(70) + borderWidth;
-            missile1.count = 0;  
-        }
-
-        // if (missile1Dead) {
-        //     pos1 = missileDead(pos1, pos2, 0, borderWidth);
-        // }
-
-        // if (missile2Dead) {
-        //     pos2 = missileDead(pos1, pos2, 1, borderWidth);
-        // }
+        // MoveTo( 1, 60 );
+        // cout << "[" << currentPosition.row << "," << currentPosition.col << "]" << endl;
 
         // 4. Prepare for the next pass
-        // currentChar = getchar();
-        // sometimes the Visual Studio Code terminal seems to forget
+        currentChar = getchar();
+
+        if (currentChar == QUIT_CHAR ) {
+            break; 
+        }
+        
     }
     // N. Tidy Up and Close Down
     ShowCursor();
     TeardownScreenAndInput();
-    // cout << "Your Score was " + to_string(counter) + ". Good Job!" << endl; // be nice to the next command
+    cout << endl; // be nice to the next command
     return EXIT_SUCCESS;
 }
