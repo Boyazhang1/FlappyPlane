@@ -7,6 +7,7 @@
 // add score functionality 
 // clear screen upon playing again 
 // change speeds
+// add colours 
 
 
 
@@ -22,11 +23,11 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 // needed to use sleep function
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <unistd.h>
-#endif
+// #ifdef _WIN32
+// #include <Windows.h>
+// #else
+// #include <unistd.h>
+// #endif
 
 using namespace std;
 
@@ -62,6 +63,7 @@ const unsigned int COLOUR_BRIGHTGREEN  { 92 };
 #pragma clang diagnostic pop
 
 
+// declare game components 
 const stringvector PLANE {
 {"            __/\\__"},
 {"           `==/\\==`"},
@@ -87,7 +89,7 @@ const stringvector EMPTYPLANE {
 
 const stringvector MISSILE { 
 {" ,-*"},
-{"(_)"},
+{"(_) "},
 };
 
 const stringvector EMPTYMISSILE { 
@@ -116,11 +118,6 @@ const stringvector EMPTYEXPLOSION {
     {"      "},
 };
 
-
-
-// vector <position> missilePositions = {{1, 1}, {1, 1}}; 
-
-vector <unsigned int> missilePositionsY = {1, 1}; 
 
 // Globals testing
 
@@ -233,24 +230,37 @@ auto drawBorder (position screenDimensions) -> void {
     }
 }
 
-// erase helper functions
-auto erasePlane(position planePosition) -> void {
+// initialize structs to represent game objects
+struct missile { position coordinates; int speed;};
+struct bullet {position coordinates; int speed; };
+typedef vector <bullet> bulletsArray; 
+ 
 
-    DrawSprite(planePosition, EMPTYPLANE); 
+map <string, int> difficulties {{"easy", 12}, {"medium" ,9}, {"hard", 6}}; 
+
+
+// drawing helper functions
+auto drawPlane(position planePosition, bool erase) -> void {
+    DrawSprite(planePosition, erase ? EMPTYPLANE: PLANE); 
 }
 
-auto eraseMissile(position bombPosition) -> void {
-
-    DrawSprite(bombPosition, EMPTYMISSILE); 
+auto drawMissile(position bombPosition, bool erase) -> void {
+    DrawSprite(bombPosition, erase ? EMPTYMISSILE : MISSILE);  
 }
 
-auto eraseBullet(position bulletPosition) -> void {
 
-    DrawSprite(bulletPosition, EMPTYBULLET); 
+auto drawBullet(position bulletPosition, bool erase) -> void {
+    DrawSprite(bulletPosition, erase ? EMPTYBULLET : BULLET); 
 }
-auto eraseExplosion(position explosionPosition) -> void {
 
-    DrawSprite(explosionPosition, EMPTYEXPLOSION); 
+auto drawBullets (bulletsArray bullets, bool erase) -> void {
+    for (bullet bul : bullets) {
+        drawBullet(bul.coordinates, erase); 
+    }
+}
+
+auto drawExplosion(position explosionPosition, bool erase) -> void {
+    DrawSprite(explosionPosition, erase? EMPTYEXPLOSION: EXPLOSION); 
 }
 
 
@@ -272,19 +282,6 @@ bool kbhit()
     return byteswaiting > 0;
 }
 
-
-
-struct missile { position coordinates; bool active; int count; };
-
-struct bullet {position coordinates; bool alive; int count; };
-typedef vector <bullet> bulletsArray; 
-map <position, int> explosions; 
-
-auto drawBullets (bulletsArray bullets) -> void {
-    for (bullet bul : bullets) {
-        DrawSprite ({bul.coordinates.row, bul.coordinates.col}, BULLET); 
-    }
-}
 
 auto planeBombCollision (unsigned int planeX, unsigned int terminalHeight, missile m) -> bool 
 {
@@ -313,10 +310,10 @@ auto bulletBombCollision (bulletsArray bullets, missile bomb) -> bool {
 
 auto bulletHandle (bulletsArray &bullets, position TERMINAL_SIZE) -> void {
     for (unsigned int i = 0; i < bullets.size(); i++) {
-        bullets[i].count += 1; 
+        bullets[i].speed += 2; 
         // bullet speed
-        if (bullets[i].count % 7 == 0) {
-            eraseBullet({bullets[i].coordinates.row, bullets[i].coordinates.col});
+        if (bullets[i].speed % 7 == 0) {
+            drawBullet({bullets[i].coordinates.row, bullets[i].coordinates.col}, true);
             bullets[i].coordinates.row -= 1;
         }
         if (bullets[i].coordinates.row >= TERMINAL_SIZE.row) {
@@ -325,19 +322,88 @@ auto bulletHandle (bulletsArray &bullets, position TERMINAL_SIZE) -> void {
     }
 }
 
-auto drawExplosion (position explosionPosition) -> void {
-    DrawSprite(explosionPosition, EXPLOSION); 
+auto resetMissile (missile &m, unsigned int borderWidth) -> void{
+    m.coordinates.row = 1; 
+    m.coordinates.col = rand()%(70) + borderWidth;
+    m.speed = 0;  
 }
 
+auto displayScore (position TERMINAL_SIZE, int score) {
+    const unsigned int scoreMsgRow = 1; 
+    const unsigned int scoreMsgCol = TERMINAL_SIZE.col / 2 - 27; 
+    MoveTo(scoreMsgRow, scoreMsgCol); 
+    cout << "                    "; 
+    cout << "Current score: " << score; 
+
+}
+// msgID: 1: start2: death, 3: end
+auto outputMessage (position TERMINAL_SIZE, int msgID, unsigned int score) -> void {
+
+    const unsigned int errorMsgRow = TERMINAL_SIZE.row / 2 - 5; 
+    const unsigned int errorMsgCol = TERMINAL_SIZE.col / 2 - 15; 
+    string difficulty; 
+    MoveTo(errorMsgRow, errorMsgCol);
+
+    switch (msgID) {
+        case 1:
+            MoveTo(errorMsgRow, errorMsgCol - 10);
+            cout << "---------------------------------------------------------------" << endl;
+            MoveTo(errorMsgRow + 2, errorMsgCol + 4);
+            cout <<  "Welcome to (insert name), made by team 3" << endl;
+            MoveTo(errorMsgRow + 4, errorMsgCol -10);
+            cout << "Instructions:" << endl;
+            MoveTo(errorMsgRow + 6, errorMsgCol - 10);
+            cout << "Avoid the incoming bombs by dodging or shooting them" << endl;
+            MoveTo(errorMsgRow + 8, errorMsgCol - 10);
+            cout << "Press 'a' to move left, 'd' to move right, spacebar to shoot" << endl;
+            MoveTo(errorMsgRow + 10, errorMsgCol - 10);
+            cout << "Try to get the highest score possible!" << endl;
+            MoveTo(errorMsgRow + 12, errorMsgCol + 9);
+            cout << "Press any key to continue" << endl;
+            MoveTo(errorMsgRow + 14, errorMsgCol - 10);
+            cout << "----------------------------------------------------------------" << endl;
+            break;
+        case 2:
+            cout << "--------------------------------------------" << endl;
+            MoveTo(errorMsgRow + 2, errorMsgCol);
+            cout <<  "           Select difficulty level:" << endl;
+            MoveTo(errorMsgRow + 4, errorMsgCol);
+            cout <<  "Type '1' for easy" << score << endl;
+            MoveTo(errorMsgRow + 6, errorMsgCol);
+            cout << "Type '2' for medium" << endl;
+            MoveTo(errorMsgRow + 8, errorMsgCol);
+            cout << "Type '3' for hard" << endl;
+            MoveTo(errorMsgRow + 10, errorMsgCol);
+            cout << "--------------------------------------------" << endl;
+            break; 
+        case 3:
+            cout << "--------------------------------------------" << endl;
+            MoveTo(errorMsgRow + 2, errorMsgCol);
+            cout <<  "                   You died:(" << endl;
+            MoveTo(errorMsgRow + 4, errorMsgCol);
+            cout <<  "                   Score: " << score << endl;
+            MoveTo(errorMsgRow + 6, errorMsgCol);
+            cout << "Press any key to play again, press q to quit" << endl;
+            MoveTo(errorMsgRow + 8, errorMsgCol);
+            cout << "--------------------------------------------" << endl;
+            break; 
+        case 4:
+            cout << "--------------------------------------------" << endl;
+            MoveTo(errorMsgRow + 2, errorMsgCol);
+            cout << "           Thank you for playing!" << endl;
+            MoveTo(errorMsgRow + 4, errorMsgCol);
+            cout <<  "          Your highest score is: " << score << endl;
+            MoveTo(errorMsgRow + 6, errorMsgCol);
+            cout << "--------------------------------------------" << endl;
+            break; 
+    }
+}
 
 
 auto main() -> int
 {
-    // bool missile1Dead = false;
-    // bool missile2Dead = false;
     using namespace std::this_thread; // sleep_for, sleep_until
     using namespace std::chrono; // nanoseconds, system_clock, seconds
-
 
     // 0. Set Up the system and get the size of the screen
     SetupScreenAndInput();
@@ -346,177 +412,168 @@ auto main() -> int
     {
         ShowCursor();
         TeardownScreenAndInput();
-        cout << endl <<  "Terminal window must be at least 30 by 50 to run this game" << endl;
+        cout << endl <<  "Terminal window must be at least 30 by 70 to run this game" << endl;
         return EXIT_FAILURE;
     }
 
-
-    
     const unsigned int borderWidth = (TERMINAL_SIZE.col - 70) / 2; 
-    // const unsigned int borderHeight = TERMINAL_SIZE.row;
-
-    // 1. Initialize State
-    position currentPosition { TERMINAL_SIZE.row - 8, borderWidth};
+    position planePosition { TERMINAL_SIZE.row - 8, borderWidth};
+    missile missile1 = {{1, rand()%(70) + borderWidth}, 0}; 
+    bool playerAlive = true;
+    unsigned int explosionTimer = 0, score = 0, highScore = 0;
+    char currentChar;
+    string level; 
+    string difficulty = "hi"; 
+    position explosionCords; 
+    bulletsArray bullets;
     // GameLoop
-    char currentChar {'z'}; // I would rather use a different approach, but this is quick
-
-    // int pos1 = 1, pos2 = 1; 
-
-    // while (pos1 - pos2 < 30) {
-    //     pos1 = rand()%(50) + borderWidth; 
-    //     pos2 = rand()%(50) + borderWidth; 
-    // } 
-
-    
-    
-    while (true){
-        cout << endl <<  "Avoid bombs by pressing a to go Left and d to go Right" << endl;
-        cout << endl <<  "Press any Key to Start" << endl;
-        getchar();
+     
+    // welcome screen
+    while (true) {
+        ClearScreen(); 
+        outputMessage(TERMINAL_SIZE, 1, score);
+        getchar(); 
         break;
     }
     ClearScreen(); 
 
-    missile missile1 = {{1, rand()%(70) + borderWidth}, true, 0}; 
-    bulletsArray bullets;
-    
-    bool playerAlive = true; 
+    // level selection screen
+    char c = -1;
+    while (c - '0' > 3 || c - '0' < 0) {
+        outputMessage(TERMINAL_SIZE, 2, score);
+        c = getchar(); 
+    }
+    // convert char to int value
+    int intc = c - '0'; 
+    if (intc == 1) {
+        difficulty = "easy";
+    }
+    if (intc == 2) {
+        difficulty = "medium";
+    }
+    if (intc == 3) {
+        difficulty = "hard";
+    }
+    ClearScreen(); 
     
     drawBorder(TERMINAL_SIZE);
-
-    position explosionCords ;
-    int explosionTimer = 0;  
+ 
 
     while(playerAlive)
     {
 
-        DrawSprite( {currentPosition.row, currentPosition.col }, PLANE );
-        DrawSprite({missile1.coordinates.row, missile1.coordinates.col}, MISSILE);
-
-        missile1.count += 1; 
+        drawPlane( {planePosition.row, planePosition.col }, false);
+        drawMissile({missile1.coordinates.row, missile1.coordinates.col}, false);
+        displayScore(TERMINAL_SIZE, score); 
+        missile1.speed += 1; 
         if (kbhit()) { 
             currentChar = getchar();
             if ( currentChar == LEFT_CHAR )  {
-                erasePlane({currentPosition.row, currentPosition.col });
-                currentPosition.col = max(  borderWidth,(currentPosition.col - 1) );
-                DrawSprite( {currentPosition.row, currentPosition.col }, PLANE );
+                drawPlane({planePosition.row, planePosition.col }, true); 
+                planePosition.col = max(  borderWidth,(planePosition.col - 1) );
+                drawPlane( {planePosition.row, planePosition.col }, false);
                 }
             if ( currentChar == RIGHT_CHAR ) {
-                erasePlane({currentPosition.row, currentPosition.col });
-                currentPosition.col = min( borderWidth + 70 - 30 ,(currentPosition.col + 1) );
-                DrawSprite( {currentPosition.row, currentPosition.col }, PLANE );
+                drawPlane({planePosition.row, planePosition.col }, true);
+                planePosition.col = min( borderWidth + 70 - 30 ,(planePosition.col + 1) );
+                drawPlane( {planePosition.row, planePosition.col }, false);
                 }
             if (currentChar == SPACE_CHAR) {
                 int numberOfBullets = (int) bullets.size(); 
                 if (numberOfBullets > 0) {
-                    // toggle new bullet to eliminate connected bullets
-                    if (bullets[numberOfBullets].count % 21 == 0) {
-                        bullets.push_back({{currentPosition.row + 2, currentPosition.col + 14}, true, 0});
+                    // delays bullet to liminate connected bullets
+                    if (bullets[numberOfBullets - 1].speed % 5 == 0) {
+                        bullets.push_back({{planePosition.row + 2, planePosition.col + 14}, 0});
                     }
                 } else {
-                    bullets.push_back({{currentPosition.row + 2, currentPosition.col + 14}, true, 0});
+                    bullets.push_back({{planePosition.row + 2, planePosition.col + 14}, 0});
                 }
             }
         }
-
-        drawBullets(bullets);
+        // draw all bullets on terminal
+        drawBullets(bullets, false);
         HideCursor();
 
-        sleep_for(20ms);
+        // delay by 10 ms
+        sleep_for(15ms);
 
         // 10 is the missile speed
-        if (missile1.count % 20 == 0) {
-            eraseMissile({missile1.coordinates.row, missile1.coordinates.col});
+        if (missile1.speed % difficulties[difficulty] == 0) {
+            drawMissile({missile1.coordinates.row, missile1.coordinates.col}, true);
             missile1.coordinates.row += 2;
         } 
 
         if (bulletBombCollision(bullets, missile1)) {
             explosionCords = {missile1.coordinates.row, missile1.coordinates.col}; 
-            eraseMissile(explosionCords);
-            drawExplosion(explosionCords);
+            drawMissile(explosionCords, true);
+            drawExplosion(explosionCords, false);
             explosionTimer = 1;
-            missile1.coordinates.row = 1; 
-            missile1.coordinates.col = rand()%(70) + borderWidth;
-            missile1.count = 0; 
-            // draw explosion
+            resetMissile(missile1, borderWidth); 
+            score += 100; 
 
         }
 
-        if (planeBombCollision(currentPosition.col, TERMINAL_SIZE.row, missile1)) {
+        if (planeBombCollision(planePosition.col, TERMINAL_SIZE.row, missile1)) {
+            
+            if (score > highScore) {
+                highScore = score; 
+            }
+
             ClearScreen();
-            MoveTo(TERMINAL_SIZE.row / 2, TERMINAL_SIZE.col / 2);
-            cout << "-------------------------------" << endl;
-            MoveTo(TERMINAL_SIZE.row / 2 + 1, TERMINAL_SIZE.col / 2);
-            cout <<  "You died:(" << endl;
-            MoveTo(TERMINAL_SIZE.row / 2 + 1, TERMINAL_SIZE.col / 2);
-            cout << "Press p to play again" << endl; 
-            sleep_for(1000ms); 
+            // 3: output death message
+            outputMessage(TERMINAL_SIZE, 3, score);
+            sleep_for(1000ms);
+
             char enteredChar = getchar(); 
-            if (enteredChar == 'p') {
+            if (enteredChar != 'q') {
                 ClearScreen(); 
                 drawBorder(TERMINAL_SIZE);
                 // make a reset function
-                missile1.coordinates.row = 1; 
-                missile1.coordinates.col = rand()%(70) + borderWidth;
-                missile1.count = 0;  
+                resetMissile(missile1, borderWidth);
+                // reset plane to origin 
+                planePosition.row = TERMINAL_SIZE.row - 8;
+                planePosition.col = borderWidth; 
+                // remove existing bullets from vector 
+                bullets.clear(); 
+                // reset score
+                score = 0; 
+                // delay by 1 second before starting again 
+                sleep_for(1000ms);
             } else {
+                // end game loop 
                 playerAlive = false; 
+                ClearScreen();
+                // 4: output end message
+                outputMessage(TERMINAL_SIZE, 4, highScore); 
+                sleep_for(5000ms); 
                 ClearScreen(); 
-                MoveTo(TERMINAL_SIZE.row / 2, TERMINAL_SIZE.col / 2);
-                cout << "The end" << endl;
-                sleep_for(3000ms);
             }
         }
 
 
-        // TODO: make this into helper function 
+        // if missile reaches the bottom, reset
         if (missile1.coordinates.row + 2 > TERMINAL_SIZE.row) {
-            missile1.coordinates.row = 1; 
-            missile1.coordinates.col = rand()%(70) + borderWidth;
-            missile1.count = 0;  
+            resetMissile(missile1, borderWidth);
+            score += 50; 
         }
-
+        // helper function to reset bullets
         bulletHandle(bullets, TERMINAL_SIZE);
-  
+
+        //
         if (explosionTimer > 0) {
             explosionTimer += 1; 
             if (explosionTimer % 25 == 0) {
-                eraseExplosion(explosionCords);
+                drawExplosion(explosionCords, true);
                 explosionTimer = 0; 
             }
-
         } 
+
     }
     // N. Tidy Up and Close Down
     ShowCursor();
     TeardownScreenAndInput();
-    // cout << "Your Score was " + to_string(counter) + ". Good Job!" << endl; // be nice to the next command
+    // cout << "Your Score was " + to_string(speeder) + ". Good Job!" << endl; // be nice to the next command
     return EXIT_SUCCESS;
 }
 
 
-// int missileSpawn( int position, int existing, unsigned int borderwidth){
-//     if (missilePositionsY[0] == 1 && missilePositionsY[1] == 1){
-//         position = 1; 
-//         while (position - 1 < 30) {
-//         position = rand()%(50) + borderwidth; 
-//         }
-//     } 
-//     else {
-//         while (position - existing < 30) {
-//         position = rand()%(50) + borderwidth;
-//         } 
-//     }
-//     return position; 
-// }
-
-// // auto resetMissile(int )
-
-// int missileDead( int positionchange, int positionexisting, int type, unsigned int borderwidth){
-//     positionchange = 1; 
-//     while (positionchange - positionexisting < 30) {
-//         positionchange = rand()%(50) + borderwidth; 
-//     } 
-//     missilePositionsY[type] = 1;
-//     return positionchange;
-// }
