@@ -1,14 +1,7 @@
-// clang++ -std=c++17 -Wall -Werror -Wextra -Wpedantic -g3 -o starter starter.cpp
+// clang++ -std=c++17 -Wall -Werror -Wextra -Wpedantic -g3 -o team03-flappyplane team03-flappyplane.cpp
 
 // Works best in Visual Studio Code if you set:
 //   Settings -> Features -> Terminal -> Local Echo Latency Threshold = -1
-
-// TODO: make a map of stringvectors and timers
-// add score functionality 
-// clear screen upon playing again 
-// change speeds
-// add colours 
-
 
 
 #include<iostream>
@@ -22,12 +15,6 @@
 #include <time.h>
 #include <sys/ioctl.h>
 #include <termios.h>
-// needed to use sleep function
-// #ifdef _WIN32
-// #include <Windows.h>
-// #else
-// #include <unistd.h>
-// #endif
 
 using namespace std;
 
@@ -216,7 +203,10 @@ auto DrawSprite( position targetPosition,
     };
 }
 
+
 auto drawBorder (position screenDimensions) -> void {
+
+    // ensures border is dynamically sized according to terminal width 
     const unsigned int screenHeight = screenDimensions.row;
     const unsigned int screenWidth = screenDimensions.col; 
 
@@ -233,13 +223,14 @@ auto drawBorder (position screenDimensions) -> void {
 // initialize structs to represent game objects
 struct missile { position coordinates; int speed;};
 struct bullet {position coordinates; int speed; };
-typedef vector <bullet> bulletsArray; 
- 
 
+typedef vector <bullet> bulletsArray;
+
+// map to represent the mode and corresponding missile speeds
 map <string, int> difficulties {{"easy", 12}, {"medium" ,9}, {"hard", 6}}; 
 
 
-// drawing helper functions
+// helper functions to draw and erase game objects
 auto drawPlane(position planePosition, bool erase) -> void {
     DrawSprite(planePosition, erase ? EMPTYPLANE: PLANE); 
 }
@@ -264,7 +255,8 @@ auto drawExplosion(position explosionPosition, bool erase) -> void {
 }
 
 
-// Consider this from a Library
+// From: https://stackoverflow.com/questions/29335758/using-kbhit-and-getch-on-linux
+// detects if keyboard is hit 
 bool kbhit()
 {
     termios term;
@@ -282,23 +274,27 @@ bool kbhit()
     return byteswaiting > 0;
 }
 
-
+// collision handler functions
 auto planeBombCollision (unsigned int planeX, unsigned int terminalHeight, missile m) -> bool 
 {
+    // note: the position of each game object is represented by the coordinates of its upper left hand corner
 
-    // vertical position of missile is less than 5 from bottom
+    // vertical position of missile is less than 8 from bottom (plane is 8 units tall)
     if (terminalHeight - m.coordinates.row < 8) {
-        // plane is to the left of missile
+        // bomb is to the right of the plane and less than 30 units right (plane has a width of 30 units)
         if (planeX < m.coordinates.col && m.coordinates.col - planeX <= 30) {
             return true;  
         }
     }
     return false; 
 }
+
 auto bulletBombCollision (bulletsArray bullets, missile bomb) -> bool {
     // check positions of each bullet on screen 
     for (bullet bul: bullets) {
+        // bullet is to the right of bomb, no more than 1 unit to the right
         if (bul.coordinates.col >= bomb.coordinates.col && bul.coordinates.col - bomb.coordinates.col < 2) {
+            // bomb and bullet are less than 3 vertical units apart, bomb is above bullet
             if (bomb.coordinates.row - bul.coordinates.row < 3 && bomb.coordinates.row - bul.coordinates.row > 0) {
                 return true; 
             }
@@ -307,15 +303,16 @@ auto bulletBombCollision (bulletsArray bullets, missile bomb) -> bool {
     return false; 
 }
 
-
+// swiss army knife function to draw, move and erase bullets
 auto bulletHandle (bulletsArray &bullets, position TERMINAL_SIZE) -> void {
     for (unsigned int i = 0; i < bullets.size(); i++) {
         bullets[i].speed += 2; 
-        // bullet speed
+        // moves bullet down 1 unit every 7 game loops to stagger 
         if (bullets[i].speed % 7 == 0) {
             drawBullet({bullets[i].coordinates.row, bullets[i].coordinates.col}, true);
             bullets[i].coordinates.row -= 1;
         }
+        // erase bullets that have hit the upper bound of the terminal from the bullets vector
         if (bullets[i].coordinates.row >= TERMINAL_SIZE.row) {
             bullets.erase(bullets.begin() + i); 
         }
@@ -336,20 +333,20 @@ auto displayScore (position TERMINAL_SIZE, int score) {
     cout << "Current score: " << score; 
 
 }
-// msgID: 1: start2: death, 3: end
+
 auto outputMessage (position TERMINAL_SIZE, int msgID, unsigned int score) -> void {
 
     const unsigned int errorMsgRow = TERMINAL_SIZE.row / 2 - 5; 
     const unsigned int errorMsgCol = TERMINAL_SIZE.col / 2 - 15; 
-    string difficulty; 
+    // message will display at the center of the screen
     MoveTo(errorMsgRow, errorMsgCol);
-
+    // msgID (1: start, 2: level selection, 3: bomb hit plane, 4: end game, 5: unexpected error)
     switch (msgID) {
         case 1:
             MoveTo(errorMsgRow, errorMsgCol - 10);
             cout << "---------------------------------------------------------------" << endl;
             MoveTo(errorMsgRow + 2, errorMsgCol + 4);
-            cout <<  "Welcome to (insert name), made by team 3" << endl;
+            cout <<  "Welcome to Flappy plane, made by team 3" << endl;
             MoveTo(errorMsgRow + 4, errorMsgCol -10);
             cout << "Instructions:" << endl;
             MoveTo(errorMsgRow + 6, errorMsgCol - 10);
@@ -368,7 +365,7 @@ auto outputMessage (position TERMINAL_SIZE, int msgID, unsigned int score) -> vo
             MoveTo(errorMsgRow + 2, errorMsgCol);
             cout <<  "           Select difficulty level:" << endl;
             MoveTo(errorMsgRow + 4, errorMsgCol);
-            cout <<  "Type '1' for easy" << score << endl;
+            cout <<  "Type '1' for easy"  << endl;
             MoveTo(errorMsgRow + 6, errorMsgCol);
             cout << "Type '2' for medium" << endl;
             MoveTo(errorMsgRow + 8, errorMsgCol);
@@ -396,6 +393,8 @@ auto outputMessage (position TERMINAL_SIZE, int msgID, unsigned int score) -> vo
             MoveTo(errorMsgRow + 6, errorMsgCol);
             cout << "--------------------------------------------" << endl;
             break; 
+        case 5: 
+            cout << "You have encountered an unexpected error. Please try again later :/" << endl; 
     }
 }
 
@@ -415,7 +414,7 @@ auto main() -> int
         cout << endl <<  "Terminal window must be at least 30 by 70 to run this game" << endl;
         return EXIT_FAILURE;
     }
-
+    // initialize variables to be used in game loop 
     const unsigned int borderWidth = (TERMINAL_SIZE.col - 70) / 2; 
     position planePosition { TERMINAL_SIZE.row - 8, borderWidth};
     missile missile1 = {{1, rand()%(70) + borderWidth}, 0}; 
@@ -426,7 +425,7 @@ auto main() -> int
     string difficulty = "hi"; 
     position explosionCords; 
     bulletsArray bullets;
-    // GameLoop
+
      
     // welcome screen
     while (true) {
@@ -443,7 +442,8 @@ auto main() -> int
         outputMessage(TERMINAL_SIZE, 2, score);
         c = getchar(); 
     }
-    // convert char to int value
+
+    // convert char to int value and determine difficulty 
     int intc = c - '0'; 
     if (intc == 1) {
         difficulty = "easy";
@@ -456,119 +456,132 @@ auto main() -> int
     }
     ClearScreen(); 
     
+    // dynamically adds border based on terminal size (always maintaining a game width of 70px)
     drawBorder(TERMINAL_SIZE);
  
-
-    while(playerAlive)
+    try
     {
+        // game loop 
+        while(playerAlive)
+        {
 
-        drawPlane( {planePosition.row, planePosition.col }, false);
-        drawMissile({missile1.coordinates.row, missile1.coordinates.col}, false);
-        displayScore(TERMINAL_SIZE, score); 
-        missile1.speed += 1; 
-        if (kbhit()) { 
-            currentChar = getchar();
-            if ( currentChar == LEFT_CHAR )  {
-                drawPlane({planePosition.row, planePosition.col }, true); 
-                planePosition.col = max(  borderWidth,(planePosition.col - 1) );
-                drawPlane( {planePosition.row, planePosition.col }, false);
-                }
-            if ( currentChar == RIGHT_CHAR ) {
-                drawPlane({planePosition.row, planePosition.col }, true);
-                planePosition.col = min( borderWidth + 70 - 30 ,(planePosition.col + 1) );
-                drawPlane( {planePosition.row, planePosition.col }, false);
-                }
-            if (currentChar == SPACE_CHAR) {
-                int numberOfBullets = (int) bullets.size(); 
-                if (numberOfBullets > 0) {
-                    // delays bullet to liminate connected bullets
-                    if (bullets[numberOfBullets - 1].speed % 5 == 0) {
+            drawPlane( {planePosition.row, planePosition.col }, false);
+            drawMissile({missile1.coordinates.row, missile1.coordinates.col}, false);
+            displayScore(TERMINAL_SIZE, score);
+
+            missile1.speed += 1; 
+
+            if (kbhit()) { 
+                currentChar = getchar();
+
+                if ( currentChar == LEFT_CHAR )  {
+                    // redraw plane 1 unit left
+                    drawPlane({planePosition.row, planePosition.col }, true); 
+                    planePosition.col = max(  borderWidth,(planePosition.col - 1) );
+                    drawPlane( {planePosition.row, planePosition.col }, false);
+                    }
+                if ( currentChar == RIGHT_CHAR ) {
+                    // redraw plane 1 unit right
+                    drawPlane({planePosition.row, planePosition.col }, true);
+                    planePosition.col = min( borderWidth + 70 - 30 ,(planePosition.col + 1) );
+                    drawPlane( {planePosition.row, planePosition.col }, false);
+                    }
+                if (currentChar == SPACE_CHAR) {
+                    // add new bullet to bullet vector
+                    int numberOfBullets = (int) bullets.size(); 
+                    if (numberOfBullets > 0) {
+                        // delays bullet generation to eliminate overlapping and connected bullets
+                        if (bullets[numberOfBullets - 1].speed % 5 == 0) {
+                            bullets.push_back({{planePosition.row + 2, planePosition.col + 14}, 0});
+                        }
+                    } else {
                         bullets.push_back({{planePosition.row + 2, planePosition.col + 14}, 0});
                     }
-                } else {
-                    bullets.push_back({{planePosition.row + 2, planePosition.col + 14}, 0});
                 }
             }
-        }
         // draw all bullets on terminal
-        drawBullets(bullets, false);
-        HideCursor();
+            drawBullets(bullets, false);
+            HideCursor();
 
         // delay by 10 ms
-        sleep_for(15ms);
+            sleep_for(15ms);
 
         // 10 is the missile speed
-        if (missile1.speed % difficulties[difficulty] == 0) {
-            drawMissile({missile1.coordinates.row, missile1.coordinates.col}, true);
-            missile1.coordinates.row += 2;
-        } 
+            if (missile1.speed % difficulties[difficulty] == 0) {
+                drawMissile({missile1.coordinates.row, missile1.coordinates.col}, true);
+                missile1.coordinates.row += 2;
+            } 
 
-        if (bulletBombCollision(bullets, missile1)) {
-            explosionCords = {missile1.coordinates.row, missile1.coordinates.col}; 
-            drawMissile(explosionCords, true);
-            drawExplosion(explosionCords, false);
-            explosionTimer = 1;
-            resetMissile(missile1, borderWidth); 
-            score += 100; 
+            if (bulletBombCollision(bullets, missile1)) {
+                explosionCords = {missile1.coordinates.row, missile1.coordinates.col}; 
+                drawMissile(explosionCords, true);
+                drawExplosion(explosionCords, false);
+                explosionTimer = 1;
+                resetMissile(missile1, borderWidth); 
+                score += 100; 
 
-        }
+            }
 
-        if (planeBombCollision(planePosition.col, TERMINAL_SIZE.row, missile1)) {
+            if (planeBombCollision(planePosition.col, TERMINAL_SIZE.row, missile1)) {
             
-            if (score > highScore) {
-                highScore = score; 
-            }
+                if (score > highScore) {
+                    highScore = score; 
+                }
 
-            ClearScreen();
-            // 3: output death message
-            outputMessage(TERMINAL_SIZE, 3, score);
-            sleep_for(1000ms);
-
-            char enteredChar = getchar(); 
-            if (enteredChar != 'q') {
-                ClearScreen(); 
-                drawBorder(TERMINAL_SIZE);
-                // make a reset function
-                resetMissile(missile1, borderWidth);
-                // reset plane to origin 
-                planePosition.row = TERMINAL_SIZE.row - 8;
-                planePosition.col = borderWidth; 
-                // remove existing bullets from vector 
-                bullets.clear(); 
-                // reset score
-                score = 0; 
-                // delay by 1 second before starting again 
-                sleep_for(1000ms);
-            } else {
-                // end game loop 
-                playerAlive = false; 
                 ClearScreen();
-                // 4: output end message
-                outputMessage(TERMINAL_SIZE, 4, highScore); 
-                sleep_for(5000ms); 
-                ClearScreen(); 
+                // 3: output death message
+                outputMessage(TERMINAL_SIZE, 3, score);
+                sleep_for(1000ms);
+
+                char enteredChar = getchar(); 
+                if (enteredChar != 'q') {
+                    ClearScreen(); 
+                    drawBorder(TERMINAL_SIZE);
+                    // make a reset function
+                    resetMissile(missile1, borderWidth);
+                    // reset plane to origin 
+                    planePosition.row = TERMINAL_SIZE.row - 8;
+                    planePosition.col = borderWidth; 
+                    // remove existing bullets from vector 
+                    bullets.clear(); 
+                    // reset score
+                    score = 0; 
+                    // delay by 1 second before starting again 
+                    sleep_for(1000ms);
+                } else {
+                    // end game loop 
+                    playerAlive = false; 
+                    ClearScreen();
+                    // 4: output end message
+                    outputMessage(TERMINAL_SIZE, 4, highScore); 
+                    sleep_for(5000ms); 
+                    ClearScreen(); 
+                }
             }
-        }
 
 
-        // if missile reaches the bottom, reset
-        if (missile1.coordinates.row + 2 > TERMINAL_SIZE.row) {
-            resetMissile(missile1, borderWidth);
-            score += 50; 
-        }
-        // helper function to reset bullets
-        bulletHandle(bullets, TERMINAL_SIZE);
-
-        //
-        if (explosionTimer > 0) {
-            explosionTimer += 1; 
-            if (explosionTimer % 25 == 0) {
-                drawExplosion(explosionCords, true);
-                explosionTimer = 0; 
+            // if missile reaches the bottom, reset
+            if (missile1.coordinates.row + 2 > TERMINAL_SIZE.row) {
+                resetMissile(missile1, borderWidth);
+                score += 50; 
             }
-        } 
+            // helper function to reset bullets
+            bulletHandle(bullets, TERMINAL_SIZE);
+            if (explosionTimer > 0) {
+                explosionTimer += 1; 
+                if (explosionTimer % 25 == 0) {
+                    drawExplosion(explosionCords, true);
+                    explosionTimer = 0; 
+                }
+            } 
 
+        }
     }
+    catch (const runtime_error& error){
+        outputMessage (TERMINAL_SIZE, 5, score);
+    }
+
+
     // N. Tidy Up and Close Down
     ShowCursor();
     TeardownScreenAndInput();
