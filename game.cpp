@@ -321,8 +321,8 @@ auto outputMessage (position TERMINAL_SIZE, int msgID, unsigned int score) -> vo
         case 1:
             MoveTo(errorMsgRow, errorMsgCol - 10);
             cout << "---------------------------------------------------------------" << endl;
-            MoveTo(errorMsgRow + 2, errorMsgCol + 4);
-            cout <<  "Welcome to Flappy plane, made by team 3" << endl;
+            MoveTo(errorMsgRow + 2, errorMsgCol + 9);
+            cout <<  "Welcome to Flappy plane!" << endl;
             MoveTo(errorMsgRow + 4, errorMsgCol -10);
             cout << "Instructions:" << endl;
             MoveTo(errorMsgRow + 6, errorMsgCol - 10);
