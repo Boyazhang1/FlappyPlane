@@ -1,6 +1,6 @@
 # Flappy Plane
 
-A simple terminal based game inspired by the classic arcade game "Space Invaders", built with C++. 
+A simple terminal based game inspired by the classic arcade game "Space Invaders", built in C++. 
  
 
 ## Usage
