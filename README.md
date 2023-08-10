@@ -11,6 +11,9 @@ A simple terminal based game inspired by the classic arcade game "Space Invaders
 5. Follow the instructions presented in the terminal
 
 ## Pictures
-<img width="1116" alt="Screen Shot 2023-08-10 at 6 09 31 PM" src="https://github.com/Boyazhang1/FlappyPlane/assets/82241706/415dce19-30f4-423c-9c22-092862d7e118">
+<img width="1151" alt="Screen Shot 2023-08-10 at 6 11 45 PM" src="https://github.com/Boyazhang1/FlappyPlane/assets/82241706/249a407a-afe7-46cd-9165-b5d558e2305b">
+<img width="1156" alt="Screen Shot 2023-08-10 at 6 11 55 PM" src="https://github.com/Boyazhang1/FlappyPlane/assets/82241706/0e150286-1634-438a-82b8-54756b365b46">
+<img width="1142" alt="Screen Shot 2023-08-10 at 6 12 05 PM" src="https://github.com/Boyazhang1/FlappyPlane/assets/82241706/3c08a9e1-bcc2-4cd1-8a14-4db59e45daf2">
+
 
 
