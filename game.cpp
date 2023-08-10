@@ -1,7 +1,4 @@
-// clang++ -std=c++17 -Wall -Werror -Wextra -Wpedantic -g3 -o team03-flappyplane team03-flappyplane.cpp
-
-// Works best in Visual Studio Code if you set:
-//   Settings -> Features -> Terminal -> Local Echo Latency Threshold = -1
+// clang++ -std=c++17 -o game game.cpp
 
 
 #include<iostream>
@@ -24,30 +21,21 @@ struct position { unsigned int row; unsigned int col; };
 typedef struct position positionstruct;
 typedef vector< string > stringvector;
 
-// Constants
-
-// Disable JUST this warning (in case students choose not to use some of these constants)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-const-variable"
-
 
 const char LEFT_CHAR  { 'a' };
 const char RIGHT_CHAR { 'd' };
 const char QUIT_CHAR  { 'q' };
 const char SPACE_CHAR { ' '}; 
-// https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 const string ANSI_START { "\033[" };
 const string START_COLOUR_PREFIX {"1;"};
 const string START_COLOUR_SUFFIX {"m"};
 const string STOP_COLOUR  {"\033[0m"};
-const unsigned int COLOUR_IGNORE { 0 }; // this is a little dangerous but should work out OK
+const unsigned int COLOUR_IGNORE { 0 }; 
 const unsigned int COLOUR_WHITE  { 37 };
 const unsigned int COLOUR_RED    { 31 };
 const unsigned int COLOUR_BLUE   { 34 };
 const unsigned int COLOUR_BLACK  { 30 };
 const unsigned int COLOUR_BRIGHTGREEN  { 92 };
-
-#pragma clang diagnostic pop
 
 
 // declare game components 
@@ -106,35 +94,24 @@ const stringvector EMPTYEXPLOSION {
 };
 
 
-// Globals testing
-
-struct termios initialTerm; // declaring variable of type "struct termios" named initialTerm
+struct termios initialTerm;
 
 // Utilty Functions
 
-// These two functions are taken from Stack Exchange and are 
-// all of the "magic" in this code.
 auto SetupScreenAndInput() -> void
 {
     struct termios newTerm;
-    // Load the current terminal attributes for STDIN and store them in a global
     tcgetattr(fileno(stdin), &initialTerm);
     newTerm = initialTerm;
-    // Mask out terminal echo and enable "noncanonical mode"
-    // " ... input is available immediately (without the user having to type 
-    // a line-delimiter character), no input processing is performed ..."
     newTerm.c_lflag &= ~ICANON;
     newTerm.c_lflag &= ~ECHO;
-    // Set the terminal attributes for STDIN immediately
     tcsetattr(fileno(stdin), TCSANOW, &newTerm);
 }
 auto TeardownScreenAndInput() -> void
 {
-    // Reset STDIO to its original settings
     tcsetattr(fileno(stdin), TCSANOW, &initialTerm);
 }
 
-// Everything from here on is based on ANSI codes
 auto ClearScreen() -> void { cout << ANSI_START << "2J" ; }
 auto MoveTo( unsigned int x, unsigned int y ) -> void { cout << ANSI_START << x << ";" << y << "H" ; }
 auto HideCursor() -> void { cout << ANSI_START << "?25l" ; }
@@ -169,7 +146,7 @@ auto GetTerminalSize() -> position
     return returnSize;
 }
 
-// This is pretty sketchy since it's not handling the graphical state very well or flexibly
+
 auto MakeColour( string inputString, 
                  const unsigned int foregroundColour = COLOUR_WHITE,
                  const unsigned int backgroundColour = COLOUR_IGNORE ) -> string
@@ -186,8 +163,7 @@ auto MakeColour( string inputString,
     return outputString;
 }
 
-// This is super sketchy since it doesn't do (e.g.) background removal
-// or allow individual colour control of the output elements.
+
 auto DrawSprite( position targetPosition,
                  stringvector sprite,
                  const unsigned int foregroundColour = COLOUR_WHITE,
